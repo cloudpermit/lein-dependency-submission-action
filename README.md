@@ -1,8 +1,12 @@
 # maven-dependency-submission-action
 
-This is a GitHub Action that will generate a complete dependency graph for a Maven project and submit the graph to the GitHub repository so that the graph is complete and includes all the transitive dependencies.
+This is a GitHub Action that will generate a complete dependency graph for a Maven or Leiningen (Clojure) project and submit the graph to the GitHub repository so that the graph is complete and includes all the transitive dependencies.
 
-The action will invoke maven using the `com.github.ferstl:depgraph-maven-plugin:4.0.3` plugin to generate JSON output of the complete dependency graph, which is then processed and submitted using the [Dependency Submission Toolkit](https://github.com/github/dependency-submission-toolkit) to the GitHub repository.
+For Maven projects, the action will invoke maven using the `com.github.ferstl:depgraph-maven-plugin:4.0.3` plugin to generate JSON output of the complete dependency graph.
+
+For Leiningen projects, the action will first run `lein pom` to generate a `pom.xml` from your `project.clj`, then use the same Maven plugin to generate the dependency graph.
+
+The generated graph is then processed and submitted using the [Dependency Submission Toolkit](https://github.com/github/dependency-submission-toolkit) to the GitHub repository.
 
 
 ## Usage
@@ -11,7 +15,12 @@ As of version `3.0.0` this action now supports Maven multi-module projects as we
 
 
 ### Pre-requisites
-For this action to work properly, you must have the Maven available on PATH (`mvn`) or using a `mvnw` Maven wrapper in your maven project directory. Maven will need to be configured to be able to access and pull your dependencies from whatever sources you have defined (i.e. a properly configured `settings.xml` or all details provided in the POM).
+
+**For Maven projects:**
+For this action to work properly, you must have Maven available on PATH (`mvn`) or using a `mvnw` Maven wrapper in your maven project directory. Maven will need to be configured to be able to access and pull your dependencies from whatever sources you have defined (i.e. a properly configured `settings.xml` or all details provided in the POM).
+
+**For Leiningen/Clojure projects:**
+For Leiningen projects, you must have Leiningen available on PATH (`lein`) or a `lein` wrapper script in your project directory. Your `project.clj` must be properly configured with all necessary repositories and dependencies. The action will use `lein pom` to generate a `pom.xml` which is then processed by the Maven dependency plugin.
 
 Custom maven `settings.xml` can now be specified as an input parameter to the action.
 
@@ -29,16 +38,31 @@ This action writes information in the repository dependency graph, so if you are
 
 * `maven-args` - An optional string value (space separated) options to pass to the maven command line when generating the dependency snapshot. This is empty by default.
 
+* `use-leiningen` - An optional `true`/`false` flag parameter to enable Leiningen support for Clojure projects. When set to `true` and a `project.clj` file is found, the action will run `lein pom` to generate a `pom.xml` before processing dependencies. Defaults to `false`.
+
 * `correlator`: An optional identifier to distinguish between multiple dependency snapshots of the same type. Defaults to the [job_id](https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions#jobsjob_id) of the current job.
 
 ## Examples
 
 Generating and submitting a dependency snapshot using the defaults:
 
-```
+```yaml
 - name: Submit Dependency Snapshot
   uses: advanced-security/maven-dependency-submission-action@v5
 ```
+
+### Leiningen/Clojure Projects
+
+For Leiningen projects, enable the `use-leiningen` flag:
+
+```yaml
+- name: Submit Dependency Snapshot for Leiningen Project
+  uses: advanced-security/maven-dependency-submission-action@v5
+  with:
+    use-leiningen: true
+```
+
+This will automatically detect `project.clj`, run `lein pom` to generate a `pom.xml`, and then process the dependencies using the Maven plugin.
 
 Upon success it will generate a snapshot captured from Maven POM like;
 ![Screenshot 2022-08-15 at 09 33 47](https://user-images.githubusercontent.com/681306/184603264-3cd69fda-75ff-4a46-b014-630acab60fab.png)

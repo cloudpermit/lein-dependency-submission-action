@@ -1,10 +1,10 @@
 import * as core from '@actions/core';
 import * as path from 'path';
 
-import { Manifest, Snapshot } from '@github/dependency-submission-toolkit';
+import { Snapshot } from '@github/dependency-submission-toolkit';
 import { Depgraph, MavenDependencyGraph, parseDependencyJson, depgraphfilename } from './depgraph';
 import { MavenRunner } from './maven-runner';
-import { loadFileContents } from './utils/file-utils';
+import { LeiningenRunner, isLeiningenProject } from './leiningen-runner';
 import { readdirSync } from 'fs';
 
 const packageData = require('../package.json');
@@ -14,6 +14,7 @@ export type MavenConfiguration = {
   ignoreMavenWrapper?: boolean;
   settingsFile?: string;
   mavenArgs?: string;
+  useLeiningen?: boolean;
 }
 
 export type SnapshotConfig = {
@@ -72,6 +73,19 @@ function getDetector() {
 }
 
 export async function generateDependencyGraphs(directory: string, config?: MavenConfiguration): Promise<Depgraph[]> {
+  // Check if this is a Leiningen project and useLeiningen is enabled
+  const shouldUseLeiningen = config?.useLeiningen && isLeiningenProject(directory);
+
+  if (shouldUseLeiningen) {
+    core.info('Detected Leiningen project (project.clj found)');
+    // Generate pom.xml from project.clj
+    const lein = new LeiningenRunner(directory);
+    core.startGroup('lein pom');
+    await lein.generatePom(directory);
+    core.endGroup();
+  }
+
+  // Use Maven to generate the dependency graph
   try {
     const mvn = new MavenRunner(directory, config?.settingsFile, config?.ignoreMavenWrapper, config?.mavenArgs);
 

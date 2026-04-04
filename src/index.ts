@@ -11,6 +11,7 @@ async function run() {
       ignoreMavenWrapper: core.getBooleanInput('ignore-maven-wrapper'),
       settingsFile: core.getInput('settings-file'),
       mavenArgs: core.getInput('maven-args') || '',
+      useLeiningen: core.getBooleanInput('use-leiningen'),
     }
     const snapshotConfig: SnapshotConfig = {
       sha: core.getInput('snapshot-sha'),

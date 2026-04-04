@@ -1,4 +1,4 @@
-import { getMavenProjectDirectory } from './utils/test-util';
+import { getMavenProjectDirectory, getLeiningenProjectDirectory } from './utils/test-util';
 import { generateDependencyGraphs, generateSnapshot } from './snapshot-generator';
 import {describe, it, expect} from 'vitest';
 import { Manifest } from '@github/dependency-submission-toolkit';
@@ -139,6 +139,37 @@ describe('snapshot-generator', () => {
 
       expect(snapshot.job.correlator).toBe('jobCorrelator');
     }, 20000);
+
+    it('should generate a snapshot for a Leiningen project', async() => {
+      // Check if lein is available
+      const { exec } = require('child_process');
+      const { promisify } = require('util');
+      const execAsync = promisify(exec);
+
+      let leinAvailable = false;
+      try {
+        await execAsync('lein version');
+        leinAvailable = true;
+      } catch (err) {
+        // lein not available, skip test
+      }
+
+      if (!leinAvailable) {
+        console.log('Skipping Leiningen test - lein not available on PATH');
+        return;
+      }
+
+      const projectDir = getLeiningenProjectDirectory('simple');
+      const mavenConfig = {
+        useLeiningen: true
+      };
+      const snapshot = await generateSnapshot(projectDir, mavenConfig);
+
+      expect(snapshot.manifests['test-project']).toBeDefined();
+      expect(snapshot.detector.version).toBe(version);
+      // The test project has dependencies: clojure, ring, compojure, cheshire
+      expect(snapshot.manifests['test-project'].countDependencies()).toBeGreaterThan(0);
+    }, 40000);
   });
 });
 

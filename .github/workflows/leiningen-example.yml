@@ -1,0 +1,69 @@
+# Example GitHub Actions workflow for Leiningen/Clojure projects
+#
+# This workflow demonstrates how to use the maven-dependency-submission-action
+# with a Leiningen (Clojure) project to submit dependency information to GitHub
+# for Dependabot security alerts and dependency graph features.
+
+name: Submit Leiningen Dependencies
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+  workflow_dispatch:
+
+# Required permissions for submitting dependency graphs
+permissions:
+  contents: write
+
+jobs:
+  submit-dependencies:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    # Set up Java (required for both Leiningen and the Maven plugin)
+    - name: Set up Java
+      uses: actions/setup-java@v4
+      with:
+        java-version: '11'
+        distribution: 'temurin'
+
+    # Install Leiningen
+    - name: Install Leiningen
+      run: |
+        curl -O https://raw.githubusercontent.com/technomancy/leiningen/stable/bin/lein
+        chmod +x lein
+        sudo mv lein /usr/local/bin/
+        lein version
+
+    # Submit dependencies using the action with Leiningen support
+    - name: Submit Dependency Snapshot
+      uses: advanced-security/maven-dependency-submission-action@v5
+      with:
+        use-leiningen: true
+        # Optional: specify directory if project.clj is not in root
+        # directory: ./my-clojure-project
+
+# Alternative: If you already have Leiningen in your environment or use a custom setup
+# jobs:
+#   submit-dependencies-with-custom-setup:
+#     runs-on: ubuntu-latest
+#
+#     steps:
+#     - name: Checkout repository
+#       uses: actions/checkout@v4
+#
+#     - name: Set up Clojure
+#       uses: DeLaGuardo/setup-clojure@12.5
+#       with:
+#         lein: 2.10.0
+#
+#     - name: Submit Dependency Snapshot
+#       uses: advanced-security/maven-dependency-submission-action@v5
+#       with:
+#         use-leiningen: true
+

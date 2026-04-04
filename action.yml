@@ -25,6 +25,11 @@ inputs:
     type: string
     default: ''
 
+  use-leiningen:
+    description: Enable Leiningen support for Clojure projects. If true and project.clj is found, will use 'lein pom' to generate pom.xml before processing
+    type: boolean
+    default: false
+
   token:
     description: The GitHub token to use to submit the depedency snapshot to the repository
     type: string

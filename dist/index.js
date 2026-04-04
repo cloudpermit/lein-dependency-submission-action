@@ -251,6 +251,7 @@ function run() {
                 ignoreMavenWrapper: core.getBooleanInput('ignore-maven-wrapper'),
                 settingsFile: core.getInput('settings-file'),
                 mavenArgs: core.getInput('maven-args') || '',
+                useLeiningen: core.getBooleanInput('use-leiningen'),
             };
             const snapshotConfig = {
                 sha: core.getInput('snapshot-sha'),
@@ -286,6 +287,162 @@ function run() {
 }
 run();
 //# sourceMappingURL=index.js.map
+
+/***/ }),
+
+/***/ 9113:
+/***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
+
+"use strict";
+
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || function (mod) {
+    if (mod && mod.__esModule) return mod;
+    var result = {};
+    if (mod != null) for (var k in mod) if (k !== "default" && Object.prototype.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
+    __setModuleDefault(result, mod);
+    return result;
+};
+var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.isLeiningenProject = exports.LeiningenRunner = void 0;
+const exec = __importStar(__nccwpck_require__(1514));
+const core = __importStar(__nccwpck_require__(2186));
+const path = __importStar(__nccwpck_require__(1017));
+const file_utils_1 = __nccwpck_require__(799);
+class LeiningenRunner {
+    constructor(directory) {
+        this.leinExecutable = resolveLeiningenExecutable(directory);
+    }
+    get executable() {
+        return this.leinExecutable;
+    }
+    exec(cwd, parameters) {
+        return __awaiter(this, void 0, void 0, function* () {
+            let executionOutput = '';
+            let executionErrors = '';
+            const options = {
+                cwd: cwd,
+                listeners: {
+                    stdout: (data) => {
+                        executionOutput += data.toString();
+                    },
+                    stderr: (data) => {
+                        executionErrors += data.toString();
+                    }
+                }
+            };
+            try {
+                const exitCode = yield exec.exec(this.leinExecutable, parameters, options);
+                return {
+                    stdout: executionOutput,
+                    stderr: executionErrors,
+                    exitCode: exitCode
+                };
+            }
+            catch (err) {
+                core.warning(`Error encountered executing leiningen: ${err.message}`);
+                return {
+                    stdout: executionOutput,
+                    stderr: executionErrors,
+                    exitCode: -1
+                };
+            }
+        });
+    }
+    /**
+     * Generate a pom.xml file using `lein pom`
+     * @param directory The directory containing project.clj
+     * @returns The path to the generated pom.xml
+     */
+    generatePom(directory) {
+        return __awaiter(this, void 0, void 0, function* () {
+            core.info('Generating pom.xml from project.clj using lein pom...');
+            const result = yield this.exec(directory, ['pom']);
+            if (result.exitCode !== 0) {
+                throw new Error(`Failed to generate pom.xml with lein pom, exit code: ${result.exitCode}\nStderr: ${result.stderr}`);
+            }
+            const pomPath = path.join(directory, 'pom.xml');
+            if (!(0, file_utils_1.fileExists)(pomPath)) {
+                throw new Error(`pom.xml was not generated at expected location: ${pomPath}`);
+            }
+            core.info(`Successfully generated pom.xml at ${pomPath}`);
+            return pomPath;
+        });
+    }
+}
+exports.LeiningenRunner = LeiningenRunner;
+/**
+ * Check if a directory contains a Leiningen project (project.clj file)
+ */
+function isLeiningenProject(directory) {
+    const projectClj = path.join(directory, 'project.clj');
+    return (0, file_utils_1.fileExists)(projectClj);
+}
+exports.isLeiningenProject = isLeiningenProject;
+/**
+ * Resolve the Leiningen executable to use
+ */
+function resolveLeiningenExecutable(directory) {
+    // Check for lein wrapper in the project directory first
+    if (directory) {
+        const wrapper = getLeiningenWrapper(directory);
+        if (wrapper) {
+            return wrapper;
+        }
+    }
+    // Fall back to lein on PATH
+    return getLeiningenExecutable();
+}
+/**
+ * Check for lein wrapper script in the project directory
+ */
+function getLeiningenWrapper(directory) {
+    const leinWrapperFilename = path.join(directory, getLeiningenWrapperExecutable());
+    if ((0, file_utils_1.fileExists)(leinWrapperFilename)) {
+        return leinWrapperFilename;
+    }
+    return undefined;
+}
+function getLeiningenWrapperExecutable() {
+    if (isWindows()) {
+        return 'lein.bat';
+    }
+    return 'lein';
+}
+function getLeiningenExecutable() {
+    if (isWindows()) {
+        return 'lein.bat';
+    }
+    return 'lein';
+}
+function isWindows() {
+    return process.platform === 'win32';
+}
+//# sourceMappingURL=leiningen-runner.js.map
 
 /***/ }),
 
@@ -487,6 +644,7 @@ const path = __importStar(__nccwpck_require__(1017));
 const dependency_submission_toolkit_1 = __nccwpck_require__(3415);
 const depgraph_1 = __nccwpck_require__(8047);
 const maven_runner_1 = __nccwpck_require__(7433);
+const leiningen_runner_1 = __nccwpck_require__(9113);
 const fs_1 = __nccwpck_require__(7147);
 const packageData = __nccwpck_require__(2876);
 const DEPGRAPH_MAVEN_PLUGIN_VERSION = '4.0.3';
@@ -532,6 +690,13 @@ function getDetector() {
 }
 function generateDependencyGraphs(directory, config) {
     return __awaiter(this, void 0, void 0, function* () {
+        // Check if this is a Leiningen project and useLeiningen is enabled
+        const shouldUseLeiningen = (config === null || config === void 0 ? void 0 : config.useLeiningen) && (0, leiningen_runner_1.isLeiningenProject)(directory);
+        if (shouldUseLeiningen) {
+            core.info('Detected Leiningen project (project.clj found)');
+            return yield generateDependencyGraphsWithLeiningen(directory, config);
+        }
+        // Otherwise, use Maven as before
         try {
             const mvn = new maven_runner_1.MavenRunner(directory, config === null || config === void 0 ? void 0 : config.settingsFile, config === null || config === void 0 ? void 0 : config.ignoreMavenWrapper, config === null || config === void 0 ? void 0 : config.mavenArgs);
             core.startGroup('depgraph-maven-plugin:aggregate');
@@ -545,7 +710,7 @@ function generateDependencyGraphs(directory, config) {
             core.info(graphResults.stderr);
             core.endGroup();
             if (graphResults.exitCode !== 0) {
-                throw new Error(`Failed to successfully dependency results with Maven, exit code: ${graphResults.exitCode}`);
+                throw new Error(`Failed to successfully generate dependency results with Maven, exit code: ${graphResults.exitCode}`);
             }
         }
         catch (err) {
@@ -568,6 +733,49 @@ function generateDependencyGraphs(directory, config) {
     });
 }
 exports.generateDependencyGraphs = generateDependencyGraphs;
+function generateDependencyGraphsWithLeiningen(directory, config) {
+    return __awaiter(this, void 0, void 0, function* () {
+        try {
+            const lein = new leiningen_runner_1.LeiningenRunner(directory);
+            // Generate pom.xml from project.clj
+            core.startGroup('lein pom');
+            yield lein.generatePom(directory);
+            core.endGroup();
+            // Now use Maven to generate the dependency graph from the generated pom.xml
+            const mvn = new maven_runner_1.MavenRunner(directory, config === null || config === void 0 ? void 0 : config.settingsFile, config === null || config === void 0 ? void 0 : config.ignoreMavenWrapper, config === null || config === void 0 ? void 0 : config.mavenArgs);
+            core.startGroup('depgraph-maven-plugin:graph (from Leiningen pom.xml)');
+            const mavenGraphArguments = [
+                `com.github.ferstl:depgraph-maven-plugin:${DEPGRAPH_MAVEN_PLUGIN_VERSION}:graph`,
+                '-DgraphFormat=json',
+                `-DoutputFileName=${depgraph_1.depgraphfilename}`,
+            ];
+            const graphResults = yield mvn.exec(directory, mavenGraphArguments);
+            core.info(graphResults.stdout);
+            core.info(graphResults.stderr);
+            core.endGroup();
+            if (graphResults.exitCode !== 0) {
+                throw new Error(`Failed to successfully generate dependency results with Maven, exit code: ${graphResults.exitCode}`);
+            }
+        }
+        catch (err) {
+            core.error(err);
+            throw new Error(`A problem was encountered generating dependency files from Leiningen project, please check execution logs for details; ${err.message}`);
+        }
+        const graphFiles = getDepgraphFiles(directory, depgraph_1.depgraphfilename);
+        let results = [];
+        for (const graphFile of graphFiles) {
+            core.debug(`Found depgraph file: ${graphFile}`);
+            try {
+                const depgraph = (0, depgraph_1.parseDependencyJson)(graphFile);
+                results.push(depgraph);
+            }
+            catch (err) {
+                core.error(`Could not parse depgraph file, '${graphFile}': ${err.message}`);
+            }
+        }
+        return results;
+    });
+}
 // TODO this is assuming the checkout was made into the base path of the workspace...
 function getRepositoryRelativePath(file) {
     const workspaceDirectory = path.resolve(process.env.GITHUB_WORKSPACE || '.');
@@ -595,8 +803,6 @@ function getNonEmptyValue(str) {
 // getDepgraphFiles recursively finds all files that match the filename within the directory
 function getDepgraphFiles(directory, filename) {
     let files = [];
-    // debug only
-    files = (0, fs_1.readdirSync)(directory);
     try {
         files = (0, fs_1.readdirSync)(directory)
             .filter((f) => f === filename)
@@ -4287,7 +4493,7 @@ module.exports = __toCommonJS(dist_src_exports);
 var import_universal_user_agent = __nccwpck_require__(5030);
 
 // pkg/dist-src/version.js
-var VERSION = "9.0.5";
+var VERSION = "9.0.6";
 
 // pkg/dist-src/defaults.js
 var userAgent = `octokit-endpoint.js/${VERSION} ${(0, import_universal_user_agent.getUserAgent)()}`;
@@ -4392,9 +4598,9 @@ function addQueryParameters(url, parameters) {
 }
 
 // pkg/dist-src/util/extract-url-variable-names.js
-var urlVariableRegex = /\{[^}]+\}/g;
+var urlVariableRegex = /\{[^{}}]+\}/g;
 function removeNonChars(variableName) {
-  return variableName.replace(/^\W+|\W+$/g, "").split(/,/);
+  return variableName.replace(/(?:^\W+)|(?:(?<!\W)\W+$)/g, "").split(/,/);
 }
 function extractUrlVariableNames(url) {
   const matches = url.match(urlVariableRegex);
@@ -4580,7 +4786,7 @@ function parse(options) {
     }
     if (url.endsWith("/graphql")) {
       if (options.mediaType.previews?.length) {
-        const previewsFromAcceptHeader = headers.accept.match(/[\w-]+(?=-preview)/g) || [];
+        const previewsFromAcceptHeader = headers.accept.match(/(?<![\w-])[\w-]+(?=-preview)/g) || [];
         headers.accept = previewsFromAcceptHeader.concat(options.mediaType.previews).map((preview) => {
           const format = options.mediaType.format ? `.${options.mediaType.format}` : "+json";
           return `application/vnd.github.${preview}-preview${format}`;
@@ -4829,7 +5035,7 @@ __export(dist_src_exports, {
 module.exports = __toCommonJS(dist_src_exports);
 
 // pkg/dist-src/version.js
-var VERSION = "9.2.1";
+var VERSION = "9.2.2";
 
 // pkg/dist-src/normalize-paginated-list-response.js
 function normalizePaginatedListResponse(response) {
@@ -4877,7 +5083,7 @@ function iterator(octokit, route, parameters) {
           const response = await requestMethod({ method, url, headers });
           const normalizedResponse = normalizePaginatedListResponse(response);
           url = ((normalizedResponse.headers.link || "").match(
-            /<([^>]+)>;\s*rel="next"/
+            /<([^<>]+)>;\s*rel="next"/
           ) || [])[1];
           return { value: normalizedResponse };
         } catch (error) {
@@ -7429,7 +7635,7 @@ var RequestError = class extends Error {
     if (options.request.headers.authorization) {
       requestCopy.headers = Object.assign({}, options.request.headers, {
         authorization: options.request.headers.authorization.replace(
-          / .*$/,
+          /(?<! ) .*$/,
           " [REDACTED]"
         )
       });
@@ -7497,7 +7703,7 @@ var import_endpoint = __nccwpck_require__(9440);
 var import_universal_user_agent = __nccwpck_require__(5030);
 
 // pkg/dist-src/version.js
-var VERSION = "8.4.0";
+var VERSION = "8.4.1";
 
 // pkg/dist-src/is-plain-object.js
 function isPlainObject(value) {
@@ -7556,7 +7762,7 @@ function fetchWrapper(requestOptions) {
       headers[keyAndValue[0]] = keyAndValue[1];
     }
     if ("deprecation" in headers) {
-      const matches = headers.link && headers.link.match(/<([^>]+)>; rel="deprecation"/);
+      const matches = headers.link && headers.link.match(/<([^<>]+)>; rel="deprecation"/);
       const deprecationLink = matches && matches.pop();
       log.warn(
         `[@octokit/request] "${requestOptions.method} ${requestOptions.url}" is deprecated. It is scheduled to be removed on ${headers.sunset}${deprecationLink ? `. See ${deprecationLink}` : ""}`
@@ -13826,7 +14032,7 @@ module.exports = {
 
 
 const { parseSetCookie } = __nccwpck_require__(4408)
-const { stringify, getHeadersList } = __nccwpck_require__(3121)
+const { stringify } = __nccwpck_require__(3121)
 const { webidl } = __nccwpck_require__(1744)
 const { Headers } = __nccwpck_require__(554)
 
@@ -13902,14 +14108,13 @@ function getSetCookies (headers) {
 
   webidl.brandCheck(headers, Headers, { strict: false })
 
-  const cookies = getHeadersList(headers).cookies
+  const cookies = headers.getSetCookie()
 
   if (!cookies) {
     return []
   }
 
-  // In older versions of undici, cookies is a list of name:value.
-  return cookies.map((pair) => parseSetCookie(Array.isArray(pair) ? pair[1] : pair))
+  return cookies.map((pair) => parseSetCookie(pair))
 }
 
 /**
@@ -14337,14 +14542,15 @@ module.exports = {
 /***/ }),
 
 /***/ 3121:
-/***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
+/***/ ((module) => {
 
 "use strict";
 
 
-const assert = __nccwpck_require__(9491)
-const { kHeadersList } = __nccwpck_require__(2785)
-
+/**
+ * @param {string} value
+ * @returns {boolean}
+ */
 function isCTLExcludingHtab (value) {
   if (value.length === 0) {
     return false
@@ -14605,31 +14811,13 @@ function stringify (cookie) {
   return out.join('; ')
 }
 
-let kHeadersListNode
-
-function getHeadersList (headers) {
-  if (headers[kHeadersList]) {
-    return headers[kHeadersList]
-  }
-
-  if (!kHeadersListNode) {
-    kHeadersListNode = Object.getOwnPropertySymbols(headers).find(
-      (symbol) => symbol.description === 'headers list'
-    )
-
-    assert(kHeadersListNode, 'Headers cannot be parsed')
-  }
-
-  const headersList = headers[kHeadersListNode]
-  assert(headersList)
-
-  return headersList
-}
-
 module.exports = {
   isCTLExcludingHtab,
-  stringify,
-  getHeadersList
+  validateCookieName,
+  validateCookiePath,
+  validateCookieValue,
+  toIMFDate,
+  stringify
 }
 
 
@@ -16558,6 +16746,14 @@ const { isUint8Array, isArrayBuffer } = __nccwpck_require__(9830)
 const { File: UndiciFile } = __nccwpck_require__(8511)
 const { parseMIMEType, serializeAMimeType } = __nccwpck_require__(685)
 
+let random
+try {
+  const crypto = __nccwpck_require__(6005)
+  random = (max) => crypto.randomInt(0, max)
+} catch {
+  random = (max) => Math.floor(Math.random(max))
+}
+
 let ReadableStream = globalThis.ReadableStream
 
 /** @type {globalThis['File']} */
@@ -16643,7 +16839,7 @@ function extractBody (object, keepalive = false) {
     // Set source to a copy of the bytes held by object.
     source = new Uint8Array(object.buffer.slice(object.byteOffset, object.byteOffset + object.byteLength))
   } else if (util.isFormDataLike(object)) {
-    const boundary = `----formdata-undici-0${`${Math.floor(Math.random() * 1e11)}`.padStart(11, '0')}`
+    const boundary = `----formdata-undici-0${`${random(1e11)}`.padStart(11, '0')}`
     const prefix = `--${boundary}\r\nContent-Disposition: form-data`
 
     /*! formdata-polyfill. MIT License. Jimmy Wärting <https://jimmy.warting.se/opensource> */
@@ -18625,6 +18821,7 @@ const {
   isValidHeaderName,
   isValidHeaderValue
 } = __nccwpck_require__(2538)
+const util = __nccwpck_require__(3837)
 const { webidl } = __nccwpck_require__(1744)
 const assert = __nccwpck_require__(9491)
 
@@ -19178,6 +19375,9 @@ Object.defineProperties(Headers.prototype, {
   [Symbol.toStringTag]: {
     value: 'Headers',
     configurable: true
+  },
+  [util.inspect.custom]: {
+    enumerable: false
   }
 })
 
@@ -28354,6 +28554,20 @@ class Pool extends PoolBase {
       ? { ...options.interceptors }
       : undefined
     this[kFactory] = factory
+
+    this.on('connectionError', (origin, targets, error) => {
+      // If a connection error occurs, we remove the client from the pool,
+      // and emit a connectionError event. They will not be re-used.
+      // Fixes https://github.com/nodejs/undici/issues/3895
+      for (const target of targets) {
+        // Do not use kRemoveClient here, as it will close the client,
+        // but the client cannot be closed in this state.
+        const idx = this[kClients].indexOf(target)
+        if (idx !== -1) {
+          this[kClients].splice(idx, 1)
+        }
+      }
+    })
   }
 
   [kGetDispatcher] () {
@@ -31474,6 +31688,14 @@ module.exports = require("net");
 
 /***/ }),
 
+/***/ 6005:
+/***/ ((module) => {
+
+"use strict";
+module.exports = require("node:crypto");
+
+/***/ }),
+
 /***/ 5673:
 /***/ ((module) => {
 
@@ -33287,7 +33509,7 @@ exports.submitSnapshot = L;
 /***/ ((module) => {
 
 "use strict";
-module.exports = JSON.parse('{"name":"maven-dependency-submission-action","version":"5.0.0","description":"Submit Maven dependencies to GitHub dependency submission API","main":"index.js","scripts":{"base-build":"npm ci && tsc","build":"npm run base-build && npm exec -- @vercel/ncc build --source-map lib/src/index.js","build-exe":"npm run build && pkg package.json --compress Gzip","test":"vitest --run"},"repository":{"type":"git","url":"git+https://github.com/advanced-security/maven-dependency-submission-action.git"},"keywords":[],"author":"GitHub, Inc","license":"MIT","bugs":{"url":"https://github.com/advanced-security/maven-dependency-submission-action/issues"},"homepage":"https://github.com/advanced-security/maven-dependency-submission-action","dependencies":{"@actions/core":"^1.10.1","@actions/exec":"^1.1.1","@github/dependency-submission-toolkit":"^2.0.0","commander":"^12.0.0","packageurl-js":"^1.2.0"},"devDependencies":{"@types/chai":"^4.3.1","@vercel/ncc":"^0.38.1","chai":"^4.3.6","@yao-pkg/pkg":"^5.11.5","ts-node":"^10.9.2","typescript":"^5.3.3","vitest":"^1.6.1"},"bin":{"cli":"lib/src/executable/cli.js"},"pkg":{"targets":["node20-linux-x64","node20-win-x64","node20-macos-x64"],"assets":["package.json"],"publicPackages":"*","outputPath":"cli"}}');
+module.exports = JSON.parse('{"name":"maven-dependency-submission-action","version":"5.0.0","description":"Submit Maven dependencies to GitHub dependency submission API","main":"index.js","scripts":{"base-build":"npm ci && tsc","build":"npm run base-build && npm exec -- @vercel/ncc build --source-map lib/src/index.js","build-exe":"npm run build && pkg package.json --compress Gzip","test":"vitest --run"},"repository":{"type":"git","url":"git+https://github.com/advanced-security/maven-dependency-submission-action.git"},"keywords":[],"author":"GitHub, Inc","license":"MIT","bugs":{"url":"https://github.com/advanced-security/maven-dependency-submission-action/issues"},"homepage":"https://github.com/advanced-security/maven-dependency-submission-action","dependencies":{"@actions/core":"^1.10.1","@actions/exec":"^1.1.1","@github/dependency-submission-toolkit":"^2.0.0","commander":"^12.0.0","packageurl-js":"^1.2.0"},"devDependencies":{"@types/chai":"^4.3.1","@vercel/ncc":"^0.38.1","chai":"^4.3.6","@yao-pkg/pkg":"^5.11.5","ts-node":"^10.9.2","typescript":"^5.3.3","vitest":"^3.1.3"},"bin":{"cli":"lib/src/executable/cli.js"},"pkg":{"targets":["node20-linux-x64","node20-win-x64","node20-macos-x64"],"assets":["package.json"],"publicPackages":"*","outputPath":"cli"}}');
 
 /***/ })
 

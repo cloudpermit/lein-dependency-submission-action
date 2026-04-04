@@ -8,6 +8,10 @@ export function getMavenProjectDirectory(name: string): string {
   return path.join(getTestDataDirectory(), 'maven', name);
 }
 
+export function getLeiningenProjectDirectory(name: string): string {
+  return path.join(getTestDataDirectory(), 'leiningen', name);
+}
+
 export function getMavenSettingsFile(): string {
   return path.join(getTestDataDirectory(), 'maven', 'settings.xml');
 }
