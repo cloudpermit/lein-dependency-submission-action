@@ -694,9 +694,13 @@ function generateDependencyGraphs(directory, config) {
         const shouldUseLeiningen = (config === null || config === void 0 ? void 0 : config.useLeiningen) && (0, leiningen_runner_1.isLeiningenProject)(directory);
         if (shouldUseLeiningen) {
             core.info('Detected Leiningen project (project.clj found)');
-            return yield generateDependencyGraphsWithLeiningen(directory, config);
+            // Generate pom.xml from project.clj
+            const lein = new leiningen_runner_1.LeiningenRunner(directory);
+            core.startGroup('lein pom');
+            yield lein.generatePom(directory);
+            core.endGroup();
         }
-        // Otherwise, use Maven as before
+        // Use Maven to generate the dependency graph
         try {
             const mvn = new maven_runner_1.MavenRunner(directory, config === null || config === void 0 ? void 0 : config.settingsFile, config === null || config === void 0 ? void 0 : config.ignoreMavenWrapper, config === null || config === void 0 ? void 0 : config.mavenArgs);
             core.startGroup('depgraph-maven-plugin:aggregate');
@@ -733,49 +737,6 @@ function generateDependencyGraphs(directory, config) {
     });
 }
 exports.generateDependencyGraphs = generateDependencyGraphs;
-function generateDependencyGraphsWithLeiningen(directory, config) {
-    return __awaiter(this, void 0, void 0, function* () {
-        try {
-            const lein = new leiningen_runner_1.LeiningenRunner(directory);
-            // Generate pom.xml from project.clj
-            core.startGroup('lein pom');
-            yield lein.generatePom(directory);
-            core.endGroup();
-            // Now use Maven to generate the dependency graph from the generated pom.xml
-            const mvn = new maven_runner_1.MavenRunner(directory, config === null || config === void 0 ? void 0 : config.settingsFile, config === null || config === void 0 ? void 0 : config.ignoreMavenWrapper, config === null || config === void 0 ? void 0 : config.mavenArgs);
-            core.startGroup('depgraph-maven-plugin:graph (from Leiningen pom.xml)');
-            const mavenGraphArguments = [
-                `com.github.ferstl:depgraph-maven-plugin:${DEPGRAPH_MAVEN_PLUGIN_VERSION}:graph`,
-                '-DgraphFormat=json',
-                `-DoutputFileName=${depgraph_1.depgraphfilename}`,
-            ];
-            const graphResults = yield mvn.exec(directory, mavenGraphArguments);
-            core.info(graphResults.stdout);
-            core.info(graphResults.stderr);
-            core.endGroup();
-            if (graphResults.exitCode !== 0) {
-                throw new Error(`Failed to successfully generate dependency results with Maven, exit code: ${graphResults.exitCode}`);
-            }
-        }
-        catch (err) {
-            core.error(err);
-            throw new Error(`A problem was encountered generating dependency files from Leiningen project, please check execution logs for details; ${err.message}`);
-        }
-        const graphFiles = getDepgraphFiles(directory, depgraph_1.depgraphfilename);
-        let results = [];
-        for (const graphFile of graphFiles) {
-            core.debug(`Found depgraph file: ${graphFile}`);
-            try {
-                const depgraph = (0, depgraph_1.parseDependencyJson)(graphFile);
-                results.push(depgraph);
-            }
-            catch (err) {
-                core.error(`Could not parse depgraph file, '${graphFile}': ${err.message}`);
-            }
-        }
-        return results;
-    });
-}
 // TODO this is assuming the checkout was made into the base path of the workspace...
 function getRepositoryRelativePath(file) {
     const workspaceDirectory = path.resolve(process.env.GITHUB_WORKSPACE || '.');
@@ -33509,7 +33470,7 @@ exports.submitSnapshot = L;
 /***/ ((module) => {
 
 "use strict";
-module.exports = JSON.parse('{"name":"maven-dependency-submission-action","version":"5.0.0","description":"Submit Maven dependencies to GitHub dependency submission API","main":"index.js","scripts":{"base-build":"npm ci && tsc","build":"npm run base-build && npm exec -- @vercel/ncc build --source-map lib/src/index.js","build-exe":"npm run build && pkg package.json --compress Gzip","test":"vitest --run"},"repository":{"type":"git","url":"git+https://github.com/advanced-security/maven-dependency-submission-action.git"},"keywords":[],"author":"GitHub, Inc","license":"MIT","bugs":{"url":"https://github.com/advanced-security/maven-dependency-submission-action/issues"},"homepage":"https://github.com/advanced-security/maven-dependency-submission-action","dependencies":{"@actions/core":"^1.10.1","@actions/exec":"^1.1.1","@github/dependency-submission-toolkit":"^2.0.0","commander":"^12.0.0","packageurl-js":"^1.2.0"},"devDependencies":{"@types/chai":"^4.3.1","@vercel/ncc":"^0.38.1","chai":"^4.3.6","@yao-pkg/pkg":"^5.11.5","ts-node":"^10.9.2","typescript":"^5.3.3","vitest":"^3.1.3"},"bin":{"cli":"lib/src/executable/cli.js"},"pkg":{"targets":["node20-linux-x64","node20-win-x64","node20-macos-x64"],"assets":["package.json"],"publicPackages":"*","outputPath":"cli"}}');
+module.exports = JSON.parse('{"name":"lein-dependency-submission-action","version":"5.0.1","description":"Submit Leiningen & Maven dependencies to GitHub dependency submission API","main":"index.js","scripts":{"base-build":"npm ci && tsc","build":"npm run base-build && npm exec -- @vercel/ncc build --source-map lib/src/index.js","build-exe":"npm run build && pkg package.json --compress Gzip","test":"vitest --run"},"repository":{"type":"git","url":"git+https://github.com/cloudpermit/lein-dependency-submission-action.git"},"keywords":[],"author":"GitHub, Inc","license":"MIT","homepage":"https://github.com/cloudpermit/lein-dependency-submission-action","dependencies":{"@actions/core":"^1.10.1","@actions/exec":"^1.1.1","@github/dependency-submission-toolkit":"^2.0.0","commander":"^12.0.0","packageurl-js":"^1.2.0"},"devDependencies":{"@types/chai":"^4.3.1","@vercel/ncc":"^0.38.1","chai":"^4.3.6","@yao-pkg/pkg":"^5.11.5","ts-node":"^10.9.2","typescript":"^5.3.3","vitest":"^3.1.3"},"bin":{"cli":"lib/src/executable/cli.js"},"pkg":{"targets":["node20-linux-x64","node20-win-x64","node20-macos-x64"],"assets":["package.json"],"publicPackages":"*","outputPath":"cli"}}');
 
 /***/ })
 

@@ -1,4 +1,4 @@
-# maven-dependency-submission-action
+# lein-dependency-submission-action
 
 This is a GitHub Action that will generate a complete dependency graph for a Maven or Leiningen (Clojure) project and submit the graph to the GitHub repository so that the graph is complete and includes all the transitive dependencies.
 
@@ -48,7 +48,7 @@ Generating and submitting a dependency snapshot using the defaults:
 
 ```yaml
 - name: Submit Dependency Snapshot
-  uses: advanced-security/maven-dependency-submission-action@v5
+  uses: advanced-security/lein-dependency-submission-action@v5
 ```
 
 ### Leiningen/Clojure Projects
@@ -57,7 +57,7 @@ For Leiningen projects, enable the `use-leiningen` flag:
 
 ```yaml
 - name: Submit Dependency Snapshot for Leiningen Project
-  uses: advanced-security/maven-dependency-submission-action@v5
+  uses: advanced-security/lein-dependency-submission-action@v5
   with:
     use-leiningen: true
 ```
@@ -66,6 +66,38 @@ This will automatically detect `project.clj`, run `lein pom` to generate a `pom.
 
 Upon success it will generate a snapshot captured from Maven POM like;
 ![Screenshot 2022-08-15 at 09 33 47](https://user-images.githubusercontent.com/681306/184603264-3cd69fda-75ff-4a46-b014-630acab60fab.png)
+
+More fully featured example with additional parameters:
+```yaml
+jobs:
+  clojure-dependabot:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+      - name: Set up JDK
+        uses: actions/setup-java@v5
+        with:
+          distribution: 'temurin'
+          java-version: '25'
+      - name: Install clojure tools
+        uses: DeLaGuardo/setup-clojure@13.6.0
+        with:
+          lein: 2.12.0
+      - name: Cache dependencies
+        uses: actions/cache@v5
+        with:
+          path: |
+            ~/.m2/repository
+          key: cache-lein-deps-${{ hashFiles('project.clj') }}
+          restore-keys: |
+            cache-lein-deps-
+      - name: Submit Dependency Snapshot for Leiningen Project
+        uses: cloudpermit/lein-dependency-submission-action@v5
+        with:
+          use-leiningen: true
+          settings-file: .github/workflows/settings.xml
+```
 
 ### Configuring for Matrix-Based Workflows
 
@@ -91,10 +123,11 @@ jobs:
       with:
         java-version: ${{ matrix.java-version }}
     - name: Submit Dependency Snapshot
-      uses: advanced-security/maven-dependency-submission-action@v3
+      uses: advanced-security/lein-dependency-submission-action@v5
        with:
         directory: ${{ matrix.directory }}
         correlator: ${{ github.job }}-${{ matrix.directory }}
+
 ```
 
 In this example, the action is configured to use different working directories based on the Java version specified in the matrix. This ensures that the dependency snapshot is accurate for each Java version being tested.
@@ -103,14 +136,14 @@ In this example, the action is configured to use different working directories b
 
 There are experimental command line clients, Linux only for now that will provide the same functionality as the GitHub Action but can be embedded into your existing CI tooling and invoked from the commandline to upload a dependency snapshot.
 
-You can obtain the executables from the latest actions workflow run https://github.com/advanced-security/maven-dependency-submission-action/actions/workflows/publish_executables.yml.
+You can obtain the executables from the latest actions workflow run https://github.com/advanced-security/lein-dependency-submission-action/actions/workflows/publish_executables.yml.
 
 ### Parameters
 
 Run the command line tool with the `--help` option to display all the possible configuration options;
 
 ```
-Usage: maven-dependency-submission [options]
+Usage: lein-dependency-submission [options]
 
 Options:
   -V, --version                             output the version number
@@ -120,7 +153,7 @@ Options:
   -s --sha <commitSha>                      GitHub repository commit SHA
   -d --directory <maven-project-directory>  the directory containing the Maven POM file (default: ".")
   --github-api-url <url>                    GitHub API URL (default: "https://api.github.com")
-  -j --job-name <jobName>                   Optional name for the activity creating and submitting the graph (default: "maven-dependency-submission-cli")
+  -j --job-name <jobName>                   Optional name for the activity creating and submitting the graph (default: "lein-dependency-submission-cli")
   -i --run-id <jobName>                     Optional Run ID number for the activity that is providing the graph
   -h, --help                                display help for command
 ```

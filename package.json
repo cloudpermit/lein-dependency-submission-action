@@ -1,7 +1,7 @@
 {
-  "name": "maven-dependency-submission-action",
-  "version": "5.0.0",
-  "description": "Submit Maven dependencies to GitHub dependency submission API",
+  "name": "lein-dependency-submission-action",
+  "version": "5.0.1",
+  "description": "Submit Leiningen & Maven dependencies to GitHub dependency submission API",
   "main": "index.js",
   "scripts": {
     "base-build": "npm ci && tsc",
@@ -11,15 +11,12 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/advanced-security/maven-dependency-submission-action.git"
+    "url": "git+https://github.com/cloudpermit/lein-dependency-submission-action.git"
   },
   "keywords": [],
   "author": "GitHub, Inc",
   "license": "MIT",
-  "bugs": {
-    "url": "https://github.com/advanced-security/maven-dependency-submission-action/issues"
-  },
-  "homepage": "https://github.com/advanced-security/maven-dependency-submission-action",
+  "homepage": "https://github.com/cloudpermit/lein-dependency-submission-action",
   "dependencies": {
     "@actions/core": "^1.10.1",
     "@actions/exec": "^1.1.1",

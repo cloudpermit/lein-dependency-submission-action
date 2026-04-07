@@ -14,7 +14,7 @@ program.option('--settings-file <settings-file>', 'path to the Maven settings fi
 program.option('--ignore-maven-wrapper', 'ingore Maven wrappers, if present, and use Maven from the PATH');
 program.option('--maven-args <maven-args>', 'additional arguments to pass to Maven');
 program.option('--github-api-url <url>', 'GitHub API URL', 'https://api.github.com');
-program.option('-j --job-name <jobName>', 'Optional name for the activity creating and submitting the graph', 'maven-dependency-submission-cli');
+program.option('-j --job-name <jobName>', 'Optional name for the activity creating and submitting the graph', 'lein-dependency-submission-cli');
 program.option('-i --run-id <jobName>', 'Optional Run ID number for the activity that is providing the graph');
 
 program.option('--snapshot-exclude-file-name', 'exclude the file name in the dependency snapshot report. If false the name of the artifactor from the POM will be used, but any links in GitHub will not work.');
